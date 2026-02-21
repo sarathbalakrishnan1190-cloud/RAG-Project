@@ -1,0 +1,20 @@
+fastapi
+uvicorn
+python-multipart
+langchain>=0.1.0
+langchain-classic
+langchain-community
+langchain-openai
+langchain-qdrant
+qdrant-client
+celery[redis]
+redis
+pypdf
+python-dotenv
+tiktoken
+streamlit
+requests
+sentence-transformers
+# huggingface-hub must be <1.0.0 due to langchain-huggingface dependency
+huggingface-hub>=0.33.4,<1.0.0
+langchain-huggingface
