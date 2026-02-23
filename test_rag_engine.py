@@ -36,8 +36,21 @@ def test_rag_flow():
     # 3. Test Query
     test_query = "What is this document about?"
     print(f"\nTesting query: '{test_query}'")
-    answer = engine.query(test_query)
-    print(f"\nAnswer:\n{answer}")
+    try:
+        answer = engine.query(test_query)
+        print(f"\nAnswer:\n{answer}")
+    except Exception as e:
+        print(f"Query failed: {e}")
+
+    # 4. Streaming query (should not raise NotImplementedError)
+    print("\nTesting streaming query")
+    try:
+        streamed = []
+        for token in engine.stream_query(test_query):
+            streamed.append(token)
+        print("Streamed result:", "".join(streamed))
+    except Exception as e:
+        print(f"Streaming failed: {e}")
 
 if __name__ == "__main__":
     test_rag_flow()

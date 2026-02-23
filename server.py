@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, HTTPException, File
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
 from celery.result import AsyncResult
@@ -7,7 +8,13 @@ from rag_engine import RAGEngine
 import os
 import shutil
 import uuid
+import json
+import logging
 from dotenv import load_dotenv
+
+# Configure Logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("DocuMindAPI")
 
 
 load_dotenv()
@@ -35,7 +42,7 @@ async def upload_documents(files: List[UploadFile]):
     saved_file_paths = []
     try:
         for file in files:
-            # Generate unique filename to avoid collisions
+            
             unique_filename = f"{uuid.uuid4()}_{file.filename}"
             file_path = os.path.join(upload_dir, unique_filename)
             
@@ -66,8 +73,7 @@ def get_status(task_id: str):
 @app.post("/chat/", response_model=QueryResponse)
 async def chat(request: QueryRequest):
     try:
-        # Convert dict history to LangChain message format if needed
-        # Assuming request.history is [{"role": "user", "content": "..."}, ...]
+       
         formatted_history = []
         history = request.history or []
         for msg in history:
@@ -80,7 +86,44 @@ async def chat(request: QueryRequest):
         return {"answer": response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/chat/stream")
+async def chat_stream(request: QueryRequest):
+    """
+    Streaming chat endpoint for real-time token generation.
+    """
+    formatted_history = []
+    history = request.history or []
+    for msg in history:
+        if msg.get("role") == "user":
+            formatted_history.append(("human", msg.get("content")))
+        elif msg.get("role") == "assistant":
+            formatted_history.append(("ai", msg.get("content")))
     
+    def event_generator():
+        try:
+            for token in rag_engine.stream_query(request.question, chat_history=formatted_history):
+                yield f"data: {json.dumps({'token': token})}\n\n"
+        except Exception as e:
+            print("REAL ERROR:", repr(e))   
+            yield f"data: {json.dumps({'error': repr(e)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+@app.get("/health")
+def health_check():
+    """
+    Detailed health check for production monitoring.
+    """
+    return {
+        "status": "healthy",
+        "service": "DocuMind Enterprise API",
+        "components": {
+            "rag_engine": "initialized",
+            "qdrant": rag_engine.qdrant_url
+        }
+    }
+
 @app.get("/")
 def read_root():
-    return {"message": "DocuMind Enterprise API is working"}
+    return {"message": "DocuMind Enterprise API is working. Use /health for details."}

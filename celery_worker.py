@@ -3,6 +3,7 @@ from celery import Celery
 from rag_engine import RAGEngine
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -26,21 +27,22 @@ celery_app.conf.update(
 rag_engine=RAGEngine()
 
 @celery_app.task(name="process_documents_task", bind=True)
+@celery_app.task(name="process_documents_task", bind=True)
 def process_documents_task(self, file_paths):
     try:
-        self.update_state(state="PROGRESS", meta={'message':'Loading and splitting documents'})
+        print(f"🔵 Task started! Processing files: {file_paths}")
+        self.update_state(state="PROGRESS", meta={'message': 'Loading and splitting documents'})
         result = rag_engine.process_documents(file_paths)
-        
-        # Cleanup temporary files
+        print(f"✅ Task done! Result: {result}")
+
         for path in file_paths:
-            file_to_remove = str(path)
-            if os.path.exists(file_to_remove):
+            if os.path.exists(path):
                 try:
-                    os.remove(file_to_remove)
+                    os.remove(path)
                 except Exception as e:
-                    print(f"Cleanup error for {file_to_remove}: {e}")
-                    
+                    print(f"Cleanup error for {path}: {e}")
+
         return result
     except Exception as e:
+        print(f"❌ Task failed: {str(e)}")
         return f"Error in background task: {str(e)}"
-

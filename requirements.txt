@@ -15,6 +15,5 @@ tiktoken
 streamlit
 requests
 sentence-transformers
-# huggingface-hub must be <1.0.0 due to langchain-huggingface dependency
 huggingface-hub>=0.33.4,<1.0.0
 langchain-huggingface
