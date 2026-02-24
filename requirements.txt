@@ -17,3 +17,4 @@ requests
 sentence-transformers
 huggingface-hub>=0.33.4,<1.0.0
 langchain-huggingface
+langchain-groq

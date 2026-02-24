@@ -33,7 +33,7 @@ from langchain_core.outputs import (
 
 from prompts import SYSTEM_PROMPT
 
-# Configure Logging
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("RAGEngine")
 
@@ -152,23 +152,30 @@ class RAGEngine:
                 max_new_tokens=512,
             )
 
-        # Connect Qdrant
+       
         try:
             print(f"Connecting to Qdrant at {self.qdrant_url}...")
             if self.qdrant_api_key:
                 self.qdrant_client = QdrantClient(
                     url=self.qdrant_url,
                     api_key=self.qdrant_api_key,
+                    timeout=60, 
                 )
             else:
-                self.qdrant_client = QdrantClient(url=self.qdrant_url)
+                self.qdrant_client = QdrantClient(
+                    url=self.qdrant_url,
+                    timeout=60, 
+                )
 
+            
             self.qdrant_client.get_collections()
-            print("✅ Connected to Qdrant")
+            print("✅ Connected to Qdrant Server")
 
-        except Exception:
-            print("⚠️  Using local Qdrant storage fallback")
-            self.qdrant_client = QdrantClient(path="./qdrant_storage")
+        except Exception as conn_err:
+            logger.error("Failed to connect to Qdrant server: %s", conn_err)
+            print(f"❌ ERROR: Qdrant server unreachable at {self.qdrant_url}")
+            print("   Please start Qdrant: docker run -p 6333:6333 qdrant/qdrant")
+            raise ConnectionError(f"Could not connect to Qdrant server at {self.qdrant_url}") from conn_err
 
         collections = self.qdrant_client.get_collections()
         if self.collection_name not in [c.name for c in collections.collections]:
@@ -191,7 +198,7 @@ class RAGEngine:
         )
 
         for file_path in file_paths:
-            loader = UnstructuredPDFLoader(file_path)
+            loader = UnstructuredPDFLoader(file_path, strategy="fast")
             docs = loader.load()
 
             for doc in docs:
