@@ -11,3 +11,5 @@ python-dotenv
 tiktoken
 requests
 langchain-groq
+sentence-transformers
+huggingface-hub
